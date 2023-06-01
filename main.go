@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "ktool/cmd"
+import "github.com/hxoreyer/ktool/cmd"
 
 func main() {
 	cmd.Execute()

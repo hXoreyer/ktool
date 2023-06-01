@@ -3,7 +3,7 @@
 安装
 
 ```shell
-go install github.com/hxoreyer/ktool
+go install github.com/hxoreyer/ktool@latest
 ```
 
 创建应用

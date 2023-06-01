@@ -1,4 +1,4 @@
-module ktool
+module github.com/hxoreyer/ktool
 
 go 1.20
 
