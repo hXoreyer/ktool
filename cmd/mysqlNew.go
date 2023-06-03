@@ -125,6 +125,9 @@ func parseLoop(str string) {
 }
 
 func toFile(name string) {
+	if isExists(fmt.Sprintf("./services/%s.go", name)) {
+		return
+	}
 	file, err := os.Create(fmt.Sprintf("./services/%s.go", name))
 	if err != nil {
 		panic(err)
@@ -137,4 +140,12 @@ func toFile(name string) {
 		return
 	}
 	fmt.Println("gen success")
+}
+
+func isExists(name string) bool {
+	_, err := os.Stat(name)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

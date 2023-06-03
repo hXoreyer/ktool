@@ -28,6 +28,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -73,6 +74,16 @@ func {{$v.FunctionName}}(c *gin.Context) {
 }
 {{end}}
 `
+
+const existContent = `
+{{range $k, $v := .Functions}}
+func {{$v.FunctionName}}(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"code": 200,
+		"msg":  "hello gin",
+	})
+}
+{{end}}`
 
 type info struct {
 	Method   string `yaml:"method"`
@@ -209,6 +220,9 @@ func parseLogic(groups []Group) {
 			if _, ok := mp[m.File]; !ok {
 				mp[m.File] = make([]logic, 0)
 			}
+			if functionIsExists(m.Function, m.File) {
+				continue
+			}
 			mp[m.File] = append(mp[m.File], logic{FunctionName: m.Function})
 		}
 	}
@@ -219,17 +233,27 @@ func parseLogic(groups []Group) {
 }
 
 func parse(name string, data []logic) {
+	if len(data) == 0 {
+		return
+	}
 	datas := struct {
 		Functions []logic
 	}{
 		Functions: data,
+	}
+	tmpl := &template.Template{}
+	if isExists(fmt.Sprintf("./controllers/%s.go", name)) {
+		f, _ := os.ReadFile(fmt.Sprintf("./controllers/%s.go", name))
+		content := string(f) + existContent
+		tmpl, _ = template.New("controller").Parse(content)
+	} else {
+		tmpl, _ = template.New("controller").Parse(controllerContent)
 	}
 	file, err := os.Create(fmt.Sprintf("./controllers/%s.go", name))
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-	tmpl, _ := template.New("controller").Parse(controllerContent)
 	tmpl.Execute(file, datas)
 	if err != nil {
 		fmt.Println("render template failed err =", err)
@@ -255,4 +279,29 @@ func initMain() {
 		bts := bufio.NewReader(bytes.NewBufferString(str))
 		io.Copy(f, bts)
 	}
+}
+
+func functionIsExists(name, path string) bool {
+	_, err := os.Stat(fmt.Sprintf("./controllers/%s.go", path))
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	f, _ := os.ReadFile(fmt.Sprintf("./controllers/%s.go", path))
+
+	regex := regexp.MustCompile(`func\s+(\w+)\(c\s+\*gin.Context\)`)
+
+	// 使用正则表达式进行匹配
+	matches := regex.FindAllStringSubmatch(string(f), -1)
+	if matches != nil {
+		for _, match := range matches {
+			functionName := match[1]
+			if functionName == name {
+				return true
+			}
+		}
+	} else {
+		return false
+	}
+	return false
 }
