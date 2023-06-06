@@ -144,8 +144,5 @@ func toFile(name string) {
 
 func isExists(name string) bool {
 	_, err := os.Stat(name)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
+	return !os.IsNotExist(err)
 }
