@@ -15,6 +15,7 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/net/proxy"
 )
 
 const (
@@ -33,7 +34,7 @@ type ClientConfig struct {
 	LastResult string
 }
 
-func CreateClient(host string, port string, username, password string) *ClientConfig {
+func CreateClient(host string, port string, username, password string, proxyUrl string) *ClientConfig {
 	cf := &ClientConfig{}
 	var (
 		sshClient  *ssh.Client
@@ -57,12 +58,38 @@ func CreateClient(host string, port string, username, password string) *ClientCo
 
 	addr := fmt.Sprintf("%s:%s", cf.Host, cf.Port)
 
-	if sshClient, err = ssh.Dial("tcp", addr, &config); err != nil {
-		log.Fatalf("connect ssh error: %s", err.Error())
-		return nil
-	}
+	if proxyUrl != "" {
+		// 创建SOCKS5代理拨号器
+		log.Printf("Start proxy: %s", proxyUrl)
+		dialer, err := proxy.SOCKS5("tcp", proxyUrl, nil, proxy.Direct)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	cf.sshClient = sshClient
+		conn, err := dialer.Dial("tcp", addr)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+
+		c, cn, req, err := ssh.NewClientConn(conn, addr, &config)
+		if err != nil {
+			log.Fatalf("connect ssh error: %s", err.Error())
+			return nil
+		}
+
+		sshClient = ssh.NewClient(c, cn, req)
+
+		cf.sshClient = sshClient
+	} else {
+
+		if sshClient, err = ssh.Dial("tcp", addr, &config); err != nil {
+			log.Fatalf("connect ssh error: %s", err.Error())
+			return nil
+		}
+
+		cf.sshClient = sshClient
+	}
 
 	if sftpClient, err = sftp.NewClient(sshClient); err != nil {
 		log.Fatalf("connect sftp error: %s", err.Error())
@@ -70,6 +97,7 @@ func CreateClient(host string, port string, username, password string) *ClientCo
 	}
 
 	cf.sftpClient = sftpClient
+	log.Println("connect server success...")
 	return cf
 }
 

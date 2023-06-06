@@ -20,6 +20,7 @@ type ServerAddr struct {
 	Port     string `yaml:"port"`
 	Account  string `yaml:"account"`
 	Password string `yaml:"password"`
+	Proxy    string `yarml:"proxy"`
 }
 
 type FileCtl struct {
@@ -47,7 +48,7 @@ func NewYaml(path string) *Yaml {
 
 func (yal Yaml) Run() {
 
-	srv := CreateClient(yal.Server.IP, yal.Server.Port, yal.Server.Account, yal.Server.Password)
+	srv := CreateClient(yal.Server.IP, yal.Server.Port, yal.Server.Account, yal.Server.Password, yal.Server.Proxy)
 	for _, v := range yal.UploadFiles {
 		srv.Upload(v.Src, v.Dst)
 	}
